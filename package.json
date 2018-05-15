@@ -1,4 +1,10 @@
 {
+  "name": "prettier-if-changed",
+  "version": "0.0.1",
+  "author": "Mark Tiedemann <www.marktiedemann@gmail.com>",
+  "bin": {
+    "prettier-if-changed": "bin.js"
+  },
   "peerDependencies": {
     "prettier": ">=1.0.0"
   },
