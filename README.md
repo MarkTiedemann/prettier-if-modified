@@ -2,6 +2,8 @@
 
 **Run `prettier` only on modified files.**
 
+**WARNING: THIS TOOL IS WORK-IN-PROGRESS. DO NOT USE YET.**
+
 ## Usage
 
 ```sh
@@ -23,8 +25,8 @@ prettier-if-modified "**/*.js" --ignore .prettierignore -- prettier --write
 var allFiles = find('**/*.js')
 
 var modifiedFiles = allFiles.filter(file => {
-  lastModified = getAttribute(file, 'last-modified')
-  lastFormatted = getAttribute(file, 'last-formatted')
+  var lastModified = getAttribute(file, 'last-modified')
+  var lastFormatted = getAttribute(file, 'last-formatted')
   return lastModified > lastFormatted
 })
 
