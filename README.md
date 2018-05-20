@@ -20,20 +20,20 @@ prettier-if-modified "**/*.js" --ignore .prettierignore -- prettier --write
 ```js
 // DANGEROUSLY_SIMPLIFIED_PSEUDO_CODE
 
-var allFiles = find("**/*.js");
+var allFiles = find('**/*.js')
 
 var modifiedFiles = allFiles.filter(file => {
-  lastModified = getAttribute(file, "last-modified");
-  lastFormatted = getAttribute(file, "last-formatted");
-  return lastModified > lastFormatted;
-});
+  lastModified = getAttribute(file, 'last-modified')
+  lastFormatted = getAttribute(file, 'last-formatted')
+  return lastModified > lastFormatted
+})
 
-prettier(modifiedFiles);
+prettier(modifiedFiles)
 
-var lastFormatted = Date.now();
+var lastFormatted = Date.now()
 modifiedFiles.forEach(file => {
-  setAttribute(file, "last-formatted", lastFormatted);
-});
+  setAttribute(file, 'last-formatted', lastFormatted)
+})
 ```
 
 ## Development
