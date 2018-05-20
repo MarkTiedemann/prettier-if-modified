@@ -4,43 +4,33 @@
 var fs = require('fs')
 var path = require('path')
 var stream = require('stream')
+var events = require('events')
 var child_process = require('child_process')
 
 var glob_stream = require('glob-stream')
 var fs_attributes = require('fs-extended-attributes')
 
 // See: https://support.microsoft.com/en-us/help/830473/command-prompt-cmd-exe-command-line-string-limitation
-var MAX_COMMAND_LENGTH = process.platform === 'win32' ? 8192 : Infinity
+var MAX_COMMAND_LENGTH = 8192
 
 // TODO: properly parse arguments and options
-main(process.argv[2])
+main(process.argv[2], err => {
+  if (err) console.error(err)
+  process.exitCode = 1
+})
 
-function main(pattern) {
+function main(pattern, onError) {
   var files = []
-  var errors = []
-
   glob_stream([pattern, '!node_modules/**'])
     .pipe(transform_glob())
-    .on('error', err => errors.push(err))
+    .on('error', onError)
     .on('data', file => files.push(file))
     .on('end', () => {
-      if (errors.length > 0) {
-        errors.forEach(err => console.error(err))
-        process.exit(1)
-      }
-
       files = files.filter(file => file.last_formatted < file.last_modified)
       files = files.map(file => file.file_path)
-
       var length = calc_command_length(files)
-      // TODO: if too long, split into multiple invocations
-      if (length > MAX_COMMAND_LENGTH) {
-        var errMsg = `Command may not be longer than ${MAX_COMMAND_LENGTH} characters, but was ${length}`
-        console.error(new RangeError(errMsg))
-        process.exit(1)
-      }
-
-      if (files.length > 0) format_files(files)
+      // TODO: split invocations if too long
+      if (files.length > 0) format_files(files, onError)
     })
 }
 
@@ -83,7 +73,7 @@ function transform_glob() {
   })
 }
 
-function format_files(files) {
+function format_files(files, onError) {
   // TODO: perhaps use prettier from node_modules (?)
   var bin = process.platform === 'win32' ? 'prettier.cmd' : 'prettier'
   // TODO: user proper arguments
@@ -92,15 +82,12 @@ function format_files(files) {
   prettier.stdout.pipe(process.stdout)
   prettier.stderr.pipe(process.stderr)
   prettier.on('close', code => {
-    if (code === 0) update_file_times(files)
-    else process.exit(code)
+    if (code === 0) update_file_times(files, onError)
+    else onError()
   })
 }
 
-function update_file_times(files) {
-  var errors = []
-  var pending = files.length * 2
-
+function update_file_times(files, onError) {
   var now = Date.now()
   var last_modified = new Date(now - 1)
   var last_formatted = new Date(now)
@@ -108,20 +95,11 @@ function update_file_times(files) {
 
   files.forEach(file => {
     fs_attributes.set(file, 'last_formatted', last_formatted_string, err => {
-      pending--
-      if (err) {
-        errors.push(err)
-        return pending--
-      }
-
-      fs.utimes(file, last_formatted, last_modified, err => {
-        pending--
-        if (err) errors.push(err)
-        if (pending === 0 && errors.length > 0) {
-          errors.forEach(err => console.error(err))
-          process.exit(1)
-        }
-      })
+      if (err) onError(err)
+      else
+        fs.utimes(file, last_formatted, last_modified, err => {
+          if (err) onError(err)
+        })
     })
   })
 }
