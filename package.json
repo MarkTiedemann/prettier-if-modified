@@ -1,18 +1,31 @@
 {
-  "name": "prettier-if-changed",
-  "version": "0.0.1",
+  "name": "prettier-if-modified",
+  "version": "0.0.0",
+  "description": "Run `prettier` only on modified files.",
   "author": "Mark Tiedemann <www.marktiedemann@gmail.com>",
+  "license": "MIT",
   "bin": {
-    "prettier-if-changed": "bin.js"
+    "prettier-if-modified": "bin.js"
   },
-  "peerDependencies": {
-    "prettier": ">=1.0.0"
+  "scripts": {
+    "format": "prettier --write \"**/*.{js,json,md}\""
   },
   "dependencies": {
     "glob": "7.1.2"
   },
   "devDependencies": {
-    "@types/node": "10.0.8",
     "prettier": "1.12.1"
-  }
+  },
+  "peerDependencies": {
+    "prettier": ">=1.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MarkTiedemann/prettier-if-modified.git"
+  },
+  "bugs": {
+    "url": "https://github.com/MarkTiedemann/prettier-if-modified/issues"
+  },
+  "homepage": "https://github.com/MarkTiedemann/prettier-if-modified",
+  "keywords": []
 }
