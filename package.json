@@ -8,11 +8,10 @@
     "prettier-if-modified": "bin.js"
   },
   "scripts": {
-    "format": "node bin \"**/*.{js,json,md}\" -- prettier --write"
+    "format": "node bin --ignore-path .prettierignore \"**/*.{js,md}\" -- prettier --write"
   },
   "dependencies": {
     "fs-extended-attributes": "1.0.1",
-    "glob": "7.1.2",
     "glob-stream": "6.1.0"
   },
   "devDependencies": {
@@ -29,5 +28,13 @@
     "url": "https://github.com/MarkTiedemann/prettier-if-modified/issues"
   },
   "homepage": "https://github.com/MarkTiedemann/prettier-if-modified",
-  "keywords": []
+  "keywords": [
+    "prettier",
+    "modified",
+    "changed",
+    "format",
+    "formatted",
+    "incremental",
+    "fast"
+  ]
 }

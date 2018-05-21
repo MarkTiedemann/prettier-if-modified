@@ -27,9 +27,12 @@ function main(args, on_error) {
     .on('end', () => {
       files = files.filter(file => file.last_formatted < file.last_modified)
       files = files.map(file => file.file_path)
-      var command_length = [...files, ...args.prettier_args].join(' ').length
+      var command_length = [args.prettier_bin, ...files, ...args.prettier_args].join(' ')
+        .length
       // TODO: split invocations if too long
-      if (files.length > 0) format_files(files, args.prettier_args, on_error)
+      if (files.length > 0) {
+        format_files(args.prettier_bin, args.prettier_args, files, on_error)
+      }
     })
 }
 
@@ -67,19 +70,15 @@ function transform_glob() {
   })
 }
 
-function format_files(files, prettier_args, on_error) {
-  var bin = prettier_args.shift()
-  var is_prettier = bin === 'prettier'
-  var is_write = is_prettier && prettier_args.includes('--write')
-  var is_windows = process.platform === 'win32'
-  if (is_prettier && is_windows) bin = 'prettier.cmd'
-  var args = [...prettier_args, ...files]
-  var child = child_process.spawn(bin, args)
+function format_files(bin, args, files, on_error) {
+  var child = child_process.spawn(bin, [...args, ...files])
   child.stdout.pipe(process.stdout)
   child.stderr.pipe(process.stderr)
   child.on('close', code => {
     if (code === 0) {
-      if (is_write) update_file_times(files, on_error)
+      if ((bin === 'prettier' || bin === 'prettier.cmd') && args.includes('--write')) {
+        update_file_times(files, on_error)
+      }
     } else on_error()
   })
 }
@@ -124,24 +123,21 @@ function parse_args(args) {
   }
 
   var split_index = args.indexOf('--')
-  if (
-    split_index === -1 ||
-    split_index === 0 ||
-    split_index === args.length - 1
-  ) {
+  if (split_index === -1 || split_index === 0 || split_index === args.length - 1) {
     print_usage()
   }
 
-  return {
-    ignore_patterns: ignore_patterns,
-    patterns: args.slice(0, split_index),
-    prettier_args: args.slice(split_index + 1)
+  var patterns = args.slice(0, split_index)
+  var prettier_args = args.slice(split_index + 1)
+  var prettier_bin = prettier_args.shift()
+  if (prettier_bin === 'prettier' && process.platform === 'win32') {
+    prettier_bin = 'prettier.cmd'
   }
+
+  return { ignore_patterns, patterns, prettier_bin, prettier_args }
 }
 
 function print_usage() {
-  console.error(
-    'Usage: prettier-if-modified [opts] [filename ...] -- [prettier command]'
-  )
+  console.error('Usage: prettier-if-modified [opts] [filename ...] -- [prettier command]')
   process.exit(1)
 }
