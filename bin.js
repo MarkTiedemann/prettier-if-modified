@@ -10,9 +10,6 @@ var child_process = require('child_process')
 var glob_stream = require('glob-stream')
 var fs_attributes = require('fs-extended-attributes')
 
-// See: https://support.microsoft.com/en-us/help/830473/command-prompt-cmd-exe-command-line-string-limitation
-var MAX_COMMAND_LENGTH = 8192
-
 main(parse_args(process.argv.slice(2)), err => {
   if (err) console.error(err)
   process.exitCode = 1
@@ -27,11 +24,24 @@ function main(args, on_error) {
     .on('end', () => {
       files = files.filter(file => file.last_formatted < file.last_modified)
       files = files.map(file => file.file_path)
-      var command_length = [args.prettier_bin, ...files, ...args.prettier_args].join(' ')
-        .length
-      // TODO: split invocations if too long
-      if (files.length > 0) {
-        format_files(args.prettier_bin, args.prettier_args, files, on_error)
+
+      // See: https://support.microsoft.com/en-us/help/830473/command-prompt-cmd-exe-command-line-string-limitation
+      var max_command_length = process.platform === 'win32' ? 2047 : 32768
+      while (files.length > 0) {
+        var command = [args.prettier_bin, ...args.prettier_args]
+        while (files.length > 0) {
+          command.push(files.shift())
+          if (command.join(' ').length > max_command_length) {
+            files.unshift(command.pop())
+            break
+          }
+        }
+        format_files(
+          args.prettier_bin,
+          args.prettier_args,
+          command.splice(2),
+          on_error
+        )
       }
     })
 }
@@ -76,7 +86,10 @@ function format_files(bin, args, files, on_error) {
   child.stderr.pipe(process.stderr)
   child.on('close', code => {
     if (code === 0) {
-      if ((bin === 'prettier' || bin === 'prettier.cmd') && args.includes('--write')) {
+      if (
+        (bin === 'prettier' || bin === 'prettier.cmd') &&
+        args.includes('--write')
+      ) {
         update_file_times(files, on_error)
       }
     } else on_error()
@@ -123,7 +136,11 @@ function parse_args(args) {
   }
 
   var split_index = args.indexOf('--')
-  if (split_index === -1 || split_index === 0 || split_index === args.length - 1) {
+  if (
+    split_index === -1 ||
+    split_index === 0 ||
+    split_index === args.length - 1
+  ) {
     print_usage()
   }
 
@@ -138,6 +155,8 @@ function parse_args(args) {
 }
 
 function print_usage() {
-  console.error('Usage: prettier-if-modified [opts] [filename ...] -- [prettier command]')
+  console.error(
+    'Usage: prettier-if-modified [opts] [filename ...] -- [prettier command]'
+  )
   process.exit(1)
 }

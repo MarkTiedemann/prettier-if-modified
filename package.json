@@ -8,6 +8,7 @@
     "prettier-if-modified": "bin.js"
   },
   "scripts": {
+    "prettier": "prettier --write \"**/*.{js,md}\"",
     "format": "node bin --ignore-path .prettierignore \"**/*.{js,md}\" -- prettier --write"
   },
   "dependencies": {
