@@ -8,7 +8,7 @@
     "prettier-if-modified": "bin.js"
   },
   "scripts": {
-    "format": "node bin \"**/*.{js,json,md}\""
+    "format": "node bin \"**/*.{js,json,md}\" -- prettier --write"
   },
   "dependencies": {
     "fs-extended-attributes": "1.0.1",

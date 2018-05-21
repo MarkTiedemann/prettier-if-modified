@@ -13,30 +13,24 @@ var fs_attributes = require('fs-extended-attributes')
 // See: https://support.microsoft.com/en-us/help/830473/command-prompt-cmd-exe-command-line-string-limitation
 var MAX_COMMAND_LENGTH = 8192
 
-// TODO: properly parse arguments and options
-main(process.argv[2], err => {
+main(parse_args(process.argv.slice(2)), err => {
   if (err) console.error(err)
   process.exitCode = 1
 })
 
-function main(pattern, onError) {
+function main(args, on_error) {
   var files = []
-  glob_stream([pattern, '!node_modules/**'])
+  glob_stream([...args.patterns, '!node_modules/**', ...args.ignore_patterns])
     .pipe(transform_glob())
-    .on('error', onError)
+    .on('error', on_error)
     .on('data', file => files.push(file))
     .on('end', () => {
       files = files.filter(file => file.last_formatted < file.last_modified)
       files = files.map(file => file.file_path)
-      var length = calc_command_length(files)
+      var command_length = [...files, ...args.prettier_args].join(' ').length
       // TODO: split invocations if too long
-      if (files.length > 0) format_files(files, onError)
+      if (files.length > 0) format_files(files, args.prettier_args, on_error)
     })
-}
-
-function calc_command_length(files) {
-  // TODO: calc length properly
-  return files.join(' ').length + 'prettier --write '.length
 }
 
 function transform_glob() {
@@ -73,21 +67,24 @@ function transform_glob() {
   })
 }
 
-function format_files(files, onError) {
-  // TODO: perhaps use prettier from node_modules (?)
-  var bin = process.platform === 'win32' ? 'prettier.cmd' : 'prettier'
-  // TODO: user proper arguments
-  var args = ['--write', ...files]
-  var prettier = child_process.spawn(bin, args)
-  prettier.stdout.pipe(process.stdout)
-  prettier.stderr.pipe(process.stderr)
-  prettier.on('close', code => {
-    if (code === 0) update_file_times(files, onError)
-    else onError()
+function format_files(files, prettier_args, on_error) {
+  var bin = prettier_args.shift()
+  var is_prettier = bin === 'prettier'
+  var is_write = is_prettier && prettier_args.includes('--write')
+  var is_windows = process.platform === 'win32'
+  if (is_prettier && is_windows) bin = 'prettier.cmd'
+  var args = [...prettier_args, ...files]
+  var child = child_process.spawn(bin, args)
+  child.stdout.pipe(process.stdout)
+  child.stderr.pipe(process.stderr)
+  child.on('close', code => {
+    if (code === 0) {
+      if (is_write) update_file_times(files, on_error)
+    } else on_error()
   })
 }
 
-function update_file_times(files, onError) {
+function update_file_times(files, on_error) {
   var now = Date.now()
   var last_modified = new Date(now - 1)
   var last_formatted = new Date(now)
@@ -95,11 +92,56 @@ function update_file_times(files, onError) {
 
   files.forEach(file => {
     fs_attributes.set(file, 'last_formatted', last_formatted_string, err => {
-      if (err) onError(err)
+      if (err) on_error(err)
       else
         fs.utimes(file, last_formatted, last_modified, err => {
-          if (err) onError(err)
+          if (err) on_error(err)
         })
     })
   })
+}
+
+function parse_args(args) {
+  if (args.length === 0) {
+    print_usage()
+  }
+
+  var ignore_patterns = []
+  if (args[0] === '--ignore-path') {
+    if (!args[1] || args[1] === '--') {
+      print_usage()
+    } else {
+      ignore_patterns = fs
+        .readFileSync(args[1])
+        .toString()
+        .split(/\r?\n/g)
+        .map(x => x.trim())
+        .filter(Boolean)
+        .filter(x => !x.startsWith('#'))
+        .map(x => '!' + x)
+      args = args.slice(2)
+    }
+  }
+
+  var split_index = args.indexOf('--')
+  if (
+    split_index === -1 ||
+    split_index === 0 ||
+    split_index === args.length - 1
+  ) {
+    print_usage()
+  }
+
+  return {
+    ignore_patterns: ignore_patterns,
+    patterns: args.slice(0, split_index),
+    prettier_args: args.slice(split_index + 1)
+  }
+}
+
+function print_usage() {
+  console.error(
+    'Usage: prettier-if-modified [opts] [filename ...] -- [prettier command]'
+  )
+  process.exit(1)
 }
