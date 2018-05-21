@@ -2,7 +2,7 @@
 
 **Run `prettier` only on modified files.**
 
-This module uses file attributes to keep track of when files have been modified and formatted. Only files that have been modified after they have been formatted will be passed on to `prettier` to be formatted again. As such, this module enables incremental formatting for codebases of all sizes.
+This module uses file attributes to keep track of when files have been modified and formatted. Only files that were modified after they have been formatted will be passed on to `prettier` to be formatted again. As such, this module enables incremental formatting for codebases of all sizes.
 
 ## Usage
 
@@ -33,19 +33,19 @@ prettier-if-modified "**/*.js" -- echo
 ## Algorithm
 
 ```js
-// WARNING: THIS IS DANGEROUSLY SIMPLIFIED PSEUDO CODE
+// WARNING: THIS IS SIMPLIFIED PSEUDOCODE
 
-var all_files = find('**/*.js')
+let all_files = find_files('**/*.js')
 
-var modified_files = all_files.filter(file => {
-  var last_modified = get_attribute(file, 'last_modified')
-  var last_formatted = get_attribute(file, 'last_formatted')
+let modified_files = all_files.filter(file => {
+  let last_modified = get_attribute(file, 'last_modified')
+  let last_formatted = get_attribute(file, 'last_formatted')
   return last_modified > last_formatted
 })
 
 prettier(modified_files)
 
-var last_formatted = Date.now()
+let last_formatted = Date.now()
 modified_files.forEach(file => {
   set_attribute(file, 'last_formatted', last_formatted)
 })

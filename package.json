@@ -1,6 +1,6 @@
 {
   "name": "prettier-if-modified",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Run `prettier` only on modified files.",
   "author": "Mark Tiedemann <www.marktiedemann@gmail.com>",
   "license": "MIT",
@@ -11,6 +11,9 @@
     "prettier": "prettier --write \"**/*.{js,md}\"",
     "format": "node bin --ignore-path .prettierignore \"**/*.{js,md}\" -- prettier --write"
   },
+  "files": [
+    "bin.js"
+  ],
   "dependencies": {
     "fs-extended-attributes": "1.0.1",
     "glob-stream": "6.1.0"

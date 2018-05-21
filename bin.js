@@ -1,14 +1,13 @@
 #!/usr/bin/env node
 'use strict'
 
-var fs = require('fs')
-var path = require('path')
-var stream = require('stream')
-var events = require('events')
-var child_process = require('child_process')
+let fs = require('fs')
+let path = require('path')
+let stream = require('stream')
+let child_process = require('child_process')
 
-var glob_stream = require('glob-stream')
-var fs_attributes = require('fs-extended-attributes')
+let glob_stream = require('glob-stream')
+let fs_attributes = require('fs-extended-attributes')
 
 main(parse_args(process.argv.slice(2)), err => {
   if (err) console.error(err)
@@ -16,34 +15,12 @@ main(parse_args(process.argv.slice(2)), err => {
 })
 
 function main(args, on_error) {
-  var files = []
+  let files = []
   glob_stream([...args.patterns, '!node_modules/**', ...args.ignore_patterns])
     .pipe(transform_glob())
     .on('error', on_error)
     .on('data', file => files.push(file))
-    .on('end', () => {
-      files = files.filter(file => file.last_formatted < file.last_modified)
-      files = files.map(file => file.file_path)
-
-      // See: https://support.microsoft.com/en-us/help/830473/command-prompt-cmd-exe-command-line-string-limitation
-      var max_command_length = process.platform === 'win32' ? 2047 : 32768
-      while (files.length > 0) {
-        var command = [args.prettier_bin, ...args.prettier_args]
-        while (files.length > 0) {
-          command.push(files.shift())
-          if (command.join(' ').length > max_command_length) {
-            files.unshift(command.pop())
-            break
-          }
-        }
-        format_files(
-          args.prettier_bin,
-          args.prettier_args,
-          command.splice(2),
-          on_error
-        )
-      }
-    })
+    .once('end', () => prepare_format(args, files, on_error))
 }
 
 function transform_glob() {
@@ -51,11 +28,11 @@ function transform_glob() {
     objectMode: true,
 
     transform(chunk, encoding, callback) {
-      var file_path = path.relative(process.cwd(), chunk.path)
-      var last_modified = undefined
-      var last_formatted = undefined
+      let file_path = path.relative(process.cwd(), chunk.path)
+      let last_modified = undefined
+      let last_formatted = undefined
 
-      var result = () => ({
+      let result = () => ({
         file_path: file_path,
         last_modified: last_modified,
         last_formatted: last_formatted
@@ -80,8 +57,36 @@ function transform_glob() {
   })
 }
 
+function prepare_format(args, files, on_error) {
+  files = files
+    .filter(file => file.last_formatted < file.last_modified)
+    .map(file => file.file_path)
+
+  // See: https://support.microsoft.com/en-us/help/830473/command-prompt-cmd-exe-command-line-string-limitation
+  let max_command_length = process.platform === 'win32' ? 2047 : 32768
+
+  // Work-around command line length limitation by splitting the files
+  // into properly sized chunks and spawning prettier multiple times
+  while (files.length > 0) {
+    let command = [args.prettier_bin, ...args.prettier_args]
+    while (files.length > 0) {
+      command.push(files.shift())
+      if (command.join(' ').length > max_command_length) {
+        files.unshift(command.pop())
+        break
+      }
+    }
+    format_files(
+      args.prettier_bin,
+      args.prettier_args,
+      command.splice(2),
+      on_error
+    )
+  }
+}
+
 function format_files(bin, args, files, on_error) {
-  var child = child_process.spawn(bin, [...args, ...files])
+  let child = child_process.spawn(bin, [...args, ...files])
   child.stdout.pipe(process.stdout)
   child.stderr.pipe(process.stderr)
   child.on('close', code => {
@@ -97,10 +102,10 @@ function format_files(bin, args, files, on_error) {
 }
 
 function update_file_times(files, on_error) {
-  var now = Date.now()
-  var last_modified = new Date(now - 1)
-  var last_formatted = new Date(now)
-  var last_formatted_string = last_formatted.getTime().toString()
+  let now = Date.now()
+  let last_modified = new Date(now - 1)
+  let last_formatted = new Date(now)
+  let last_formatted_string = last_formatted.getTime().toString()
 
   files.forEach(file => {
     fs_attributes.set(file, 'last_formatted', last_formatted_string, err => {
@@ -118,7 +123,7 @@ function parse_args(args) {
     print_usage()
   }
 
-  var ignore_patterns = []
+  let ignore_patterns = []
   if (args[0] === '--ignore-path') {
     if (!args[1] || args[1] === '--') {
       print_usage()
@@ -135,7 +140,7 @@ function parse_args(args) {
     }
   }
 
-  var split_index = args.indexOf('--')
+  let split_index = args.indexOf('--')
   if (
     split_index === -1 ||
     split_index === 0 ||
@@ -144,9 +149,9 @@ function parse_args(args) {
     print_usage()
   }
 
-  var patterns = args.slice(0, split_index)
-  var prettier_args = args.slice(split_index + 1)
-  var prettier_bin = prettier_args.shift()
+  let patterns = args.slice(0, split_index)
+  let prettier_args = args.slice(split_index + 1)
+  let prettier_bin = prettier_args.shift()
   if (prettier_bin === 'prettier' && process.platform === 'win32') {
     prettier_bin = 'prettier.cmd'
   }
