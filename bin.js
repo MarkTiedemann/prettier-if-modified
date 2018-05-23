@@ -47,8 +47,12 @@ function transform_glob() {
       })
 
       fs_attributes.get(file_path, 'last_formatted', (err, attr) => {
-        if (err) return callback(err)
-        last_formatted = attr === null ? 0 : parseFloat(attr)
+        // See: https://github.com/mafintosh/fs-extended-attributes/issues/2
+        if (err && err.message !== 'get fs attribute failed') {
+          return callback(err)
+        }
+        last_formatted =
+          attr === null || attr === undefined ? 0 : parseFloat(attr)
         if (last_modified !== undefined) {
           callback(null, result())
         }

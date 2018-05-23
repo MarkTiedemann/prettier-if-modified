@@ -1,6 +1,6 @@
 {
   "name": "prettier-if-modified",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Run `prettier` only on modified files.",
   "author": "Mark Tiedemann <www.marktiedemann@gmail.com>",
   "license": "MIT",
