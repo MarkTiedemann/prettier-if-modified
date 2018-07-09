@@ -52,7 +52,11 @@ function transform_glob() {
 
       fs_attributes.get(file_path, 'last_formatted', (err, attr) => {
         // See: https://github.com/mafintosh/fs-extended-attributes/issues/2
-        if (err && err.message !== 'get fs attribute failed') {
+        if (
+          err &&
+          err.message !== 'get fs attribute failed' &&
+          err.code !== 'ENOATTR'
+        ) {
           return callback(err)
         }
         last_formatted =
