@@ -7,7 +7,11 @@ let stream = require('stream')
 let child_process = require('child_process')
 
 let glob_stream = require('glob-stream')
-let fs_attributes = require('fs-extended-attributes')
+
+let fs_attributes =
+  process.platform === 'darwin'
+    ? require('fs-xattr')
+    : require('fs-extended-attributes')
 
 main(parse_args(process.argv.slice(2)), err => {
   if (err) console.error(err)
