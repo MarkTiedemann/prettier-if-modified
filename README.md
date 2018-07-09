@@ -24,12 +24,6 @@ prettier-if-modified "**/*.js" -- prettier --write
 prettier-if-modified --ignore-path .prettierignore "**/*.js" -- prettier --write
 ```
 
-**Print files that would be formatted:**
-
-```sh
-prettier-if-modified "**/*.js" -- echo
-```
-
 ## Algorithm
 
 ```js
