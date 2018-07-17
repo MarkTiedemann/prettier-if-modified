@@ -20,7 +20,12 @@ main(parse_args(process.argv.slice(2)), err => {
 
 function main(args, on_error) {
   let files = []
-  glob_stream([...args.patterns, '!node_modules/**', ...args.ignore_patterns])
+  let stream = glob_stream([
+    ...args.patterns,
+    '!node_modules/**',
+    ...args.ignore_patterns
+  ])
+  stream
     .pipe(transform_glob())
     .on('error', on_error)
     .on('data', file => files.push(file))
